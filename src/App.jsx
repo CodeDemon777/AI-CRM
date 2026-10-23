@@ -72,6 +72,7 @@ function App() {
 
   // Manual refresh handler
   const handleRefresh = async () => {
+    clearFeedback();
     try {
       const health = await checkBackendHealth();
       if (health && health.status === "UP") {
@@ -85,15 +86,16 @@ function App() {
           fetchCustomers().catch(() => null),
           fetchLeads().catch(() => null),
         ]);
-        if (serverCustomers) setCustomers(serverCustomers);
-        if (serverLeads) setLeads(serverLeads);
-        setMessage("Synced data with backend.");
+        if (serverCustomers && serverCustomers.length > 0) setCustomers(serverCustomers);
+        if (serverLeads && serverLeads.length > 0) setLeads(serverLeads);
+        setMessage("Connected to backend! Data synchronized.");
       } else {
         setBackendStatus({
           connected: false,
           databaseConnected: false,
           databaseMode: "Frontend Demo Mode",
         });
+        setError("Backend is starting up or unreachable. Please verify Spring Boot on port 8081.");
       }
     } catch {
       setBackendStatus({
@@ -101,14 +103,19 @@ function App() {
         databaseConnected: false,
         databaseMode: "Frontend Demo Mode",
       });
+      setError("Backend is starting up or unreachable. Please verify Spring Boot on port 8081.");
     }
   };
 
   useEffect(() => {
     let isMounted = true;
-    checkBackendHealth()
-      .then(async (health) => {
+    let retryTimer = null;
+
+    const checkHealth = async () => {
+      try {
+        const health = await checkBackendHealth();
         if (!isMounted) return;
+
         if (health && health.status === "UP") {
           setBackendStatus({
             connected: true,
@@ -129,20 +136,26 @@ function App() {
             databaseConnected: false,
             databaseMode: "Frontend Demo Mode",
           });
+          // Auto-retry in 3 seconds to connect as soon as Spring Boot finishes starting
+          retryTimer = setTimeout(checkHealth, 3000);
         }
-      })
-      .catch(() => {
+      } catch {
         if (isMounted) {
           setBackendStatus({
             connected: false,
             databaseConnected: false,
             databaseMode: "Frontend Demo Mode",
           });
+          retryTimer = setTimeout(checkHealth, 3000);
         }
-      });
+      }
+    };
+
+    checkHealth();
 
     return () => {
       isMounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, []);
 
