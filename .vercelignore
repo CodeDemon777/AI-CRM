@@ -1,0 +1,6 @@
+backend/
+target/
+.mvn/
+*.log
+Dockerfile
+render.yaml
