@@ -15,18 +15,21 @@ public class DashboardService {
 
     private final CustomerService customerService;
     private final LeadService leadService;
+    private final ProductService productService;
     private final MongoHealthService mongoHealthService;
 
     @Autowired
-    public DashboardService(CustomerService customerService, LeadService leadService, MongoHealthService mongoHealthService) {
+    public DashboardService(CustomerService customerService, LeadService leadService, ProductService productService, MongoHealthService mongoHealthService) {
         this.customerService = customerService;
         this.leadService = leadService;
+        this.productService = productService;
         this.mongoHealthService = mongoHealthService;
     }
 
     public DashboardStats getStats() {
         List<Customer> customers = customerService.getAllCustomers(null);
         List<Lead> leads = leadService.getAllLeads(null, null);
+        long totalProducts = productService.countProducts();
 
         long totalCustomers = customers.size();
         long totalLeads = leads.size();
@@ -48,6 +51,7 @@ public class DashboardService {
         return new DashboardStats(
                 totalCustomers,
                 totalLeads,
+                totalProducts,
                 convertedLeads,
                 conversionRate,
                 totalPipelineValue,

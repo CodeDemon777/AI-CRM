@@ -112,3 +112,52 @@ export async function fetchDashboardStats() {
   if (!res.ok) throw new Error('Failed to fetch dashboard stats');
   return await res.json();
 }
+
+export async function fetchProducts(search = '', category = '') {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (category && category !== 'All') params.append('category', category);
+  const query = params.toString() ? `?${params.toString()}` : '';
+
+  const res = await fetch(`${API_BASE}/products${query}`);
+  if (!res.ok) throw new Error('Failed to fetch products from backend');
+  return await res.json();
+}
+
+export async function createProductApi(product) {
+  const res = await fetch(`${API_BASE}/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(product),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to create product');
+  }
+  return await res.json();
+}
+
+export async function updateProductApi(id, product) {
+  const res = await fetch(`${API_BASE}/products/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(product),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to update product');
+  }
+  return await res.json();
+}
+
+export async function deleteProductApi(id) {
+  const res = await fetch(`${API_BASE}/products/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to delete product');
+  }
+  return await res.json();
+}
+

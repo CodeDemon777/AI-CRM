@@ -8,6 +8,9 @@ import {
   fetchLeads,
   createLeadApi,
   updateLeadStatusApi,
+  fetchProducts,
+  createProductApi,
+  deleteProductApi,
 } from "./api";
 
 const initialCustomers = [
@@ -44,11 +47,47 @@ const initialLeads = [
   },
 ];
 
+const initialProducts = [
+  {
+    id: "p1",
+    name: "Cloud CRM Enterprise",
+    sku: "PRD-CRM-01",
+    category: "Software",
+    price: 45000,
+    stock: 50,
+    status: "Active",
+    description: "Full-featured cloud CRM suite with multi-channel support.",
+  },
+  {
+    id: "p2",
+    name: "AI Sales Copilot Add-on",
+    sku: "PRD-AI-02",
+    category: "AI Services",
+    price: 18000,
+    stock: 100,
+    status: "Active",
+    description: "Predictive analytics & deal closing recommendation engine.",
+  },
+  {
+    id: "p3",
+    name: "Dedicated Onboarding & Training",
+    sku: "PRD-SRV-03",
+    category: "Services",
+    price: 12000,
+    stock: 20,
+    status: "Active",
+    description: "1-on-1 enterprise setup and sales rep onboarding workshop.",
+  },
+];
+
 function App() {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [customers, setCustomers] = useState(initialCustomers);
   const [leads, setLeads] = useState(initialLeads);
+  const [products, setProducts] = useState(initialProducts);
   const [search, setSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [productCategoryFilter, setProductCategoryFilter] = useState("All");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [backendStatus, setBackendStatus] = useState({
@@ -70,6 +109,15 @@ function App() {
     value: "",
   });
 
+  const [productForm, setProductForm] = useState({
+    name: "",
+    sku: "",
+    category: "Software",
+    price: "",
+    stock: "10",
+    description: "",
+  });
+
   // Manual refresh handler
   const handleRefresh = async () => {
     clearFeedback();
@@ -82,13 +130,15 @@ function App() {
           databaseMode: health.databaseMode || "Spring Boot Active",
         });
 
-        const [serverCustomers, serverLeads] = await Promise.all([
+        const [serverCustomers, serverLeads, serverProducts] = await Promise.all([
           fetchCustomers().catch(() => null),
           fetchLeads().catch(() => null),
+          fetchProducts().catch(() => null),
         ]);
         if (serverCustomers && serverCustomers.length > 0) setCustomers(serverCustomers);
         if (serverLeads && serverLeads.length > 0) setLeads(serverLeads);
-        setMessage("Connected to backend! Data synchronized.");
+        if (serverProducts && serverProducts.length > 0) setProducts(serverProducts);
+        setMessage("Connected to MongoDB Atlas backend! Data synchronized.");
       } else {
         setBackendStatus({
           connected: false,
@@ -123,13 +173,15 @@ function App() {
             databaseMode: health.databaseMode || "Spring Boot Active",
           });
 
-          const [serverCustomers, serverLeads] = await Promise.all([
+          const [serverCustomers, serverLeads, serverProducts] = await Promise.all([
             fetchCustomers().catch(() => null),
             fetchLeads().catch(() => null),
+            fetchProducts().catch(() => null),
           ]);
           if (!isMounted) return;
           if (serverCustomers && serverCustomers.length > 0) setCustomers(serverCustomers);
           if (serverLeads && serverLeads.length > 0) setLeads(serverLeads);
+          if (serverProducts && serverProducts.length > 0) setProducts(serverProducts);
         } else {
           setBackendStatus({
             connected: false,
@@ -181,6 +233,20 @@ function App() {
       .includes(search.toLowerCase().trim())
   );
 
+  // Search & filter products
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory =
+      productCategoryFilter === "All" ||
+      (product.category && product.category.toLowerCase() === productCategoryFilter.toLowerCase());
+    const query = productSearch.toLowerCase().trim();
+    const matchesSearch =
+      !query ||
+      `${product.name} ${product.sku || ""} ${product.category || ""} ${product.description || ""}`
+        .toLowerCase()
+        .includes(query);
+    return matchesCategory && matchesSearch;
+  });
+
   // Find customer name for each lead
   function getCustomerName(customerId) {
     const customer = customers.find(
@@ -201,6 +267,85 @@ function App() {
     setActiveTab(tab);
     clearFeedback();
     setSearch("");
+    setProductSearch("");
+  }
+
+  // Add a product
+  async function handleAddProduct(event) {
+    event.preventDefault();
+    clearFeedback();
+
+    const name = productForm.name.trim();
+    const sku = productForm.sku.trim() || `PRD-${Date.now() % 10000}`;
+    const category = productForm.category.trim() || "Software";
+    const price = Number(productForm.price);
+    const stock = Number(productForm.stock) || 0;
+    const description = productForm.description.trim();
+
+    if (!name || isNaN(price) || price < 0) {
+      setError("Please provide a valid product name and positive price.");
+      return;
+    }
+
+    const productPayload = {
+      name,
+      sku,
+      category,
+      price,
+      stock,
+      status: stock > 0 ? "Active" : "Out of Stock",
+      description,
+    };
+
+    if (backendStatus.connected) {
+      try {
+        const savedProduct = await createProductApi(productPayload);
+        setProducts((prev) => [...prev, savedProduct]);
+        setMessage("Product added successfully to MongoDB Atlas!");
+      } catch (err) {
+        setError(err.message || "Failed to save product to backend.");
+        return;
+      }
+    } else {
+      const newProduct = {
+        id: String(Date.now()),
+        ...productPayload,
+      };
+      setProducts((prev) => [...prev, newProduct]);
+      setMessage("Product added successfully (local mode).");
+    }
+
+    setProductForm({
+      name: "",
+      sku: "",
+      category: "Software",
+      price: "",
+      stock: "10",
+      description: "",
+    });
+  }
+
+  // Delete a product
+  async function handleDeleteProduct(productId) {
+    const confirmed = window.confirm("Delete this product from your catalog?");
+    if (!confirmed) return;
+
+    if (backendStatus.connected) {
+      try {
+        await deleteProductApi(productId);
+        setProducts((prev) => prev.filter((p) => String(p.id) !== String(productId)));
+        clearFeedback();
+        setMessage("Product deleted from MongoDB Atlas.");
+        return;
+      } catch (err) {
+        setError(err.message || "Failed to delete product from backend.");
+        return;
+      }
+    }
+
+    setProducts((prev) => prev.filter((p) => String(p.id) !== String(productId)));
+    clearFeedback();
+    setMessage("Product deleted.");
   }
 
   // Add a customer
@@ -433,6 +578,13 @@ function App() {
           </button>
 
           <button
+            className={activeTab === "Products" ? "nav-link active" : "nav-link"}
+            onClick={() => navigate("Products")}
+          >
+            <span>⬡</span> Products
+          </button>
+
+          <button
             className={activeTab === "Leads" ? "nav-link active" : "nav-link"}
             onClick={() => navigate("Leads")}
           >
@@ -505,7 +657,7 @@ function App() {
                   <span className="eyebrow">BUSINESS OVERVIEW</span>
                   <h2>Welcome to your CRM workspace!</h2>
                   <p>
-                    Manage customers, track sales opportunities,
+                    Manage customers, products, track sales opportunities,
                     and discover your next best action.
                   </p>
                 </div>
@@ -517,11 +669,18 @@ function App() {
                   <div className="stat-icon purple">♙</div>
                   <p>Total Customers</p>
                   <h2>{customers.length}</h2>
-                  <span>Registered customers</span>
+                  <span>MongoDB Atlas collection</span>
                 </article>
 
                 <article className="stat-card">
-                  <div className="stat-icon blue">◎</div>
+                  <div className="stat-icon blue">⬡</div>
+                  <p>Total Products</p>
+                  <h2>{products.length}</h2>
+                  <span>MongoDB Atlas collection</span>
+                </article>
+
+                <article className="stat-card">
+                  <div className="stat-icon orange">◎</div>
                   <p>Total Leads</p>
                   <h2>{leads.length}</h2>
                   <span>All sales opportunities</span>
@@ -535,7 +694,7 @@ function App() {
                 </article>
 
                 <article className="stat-card">
-                  <div className="stat-icon orange">↗</div>
+                  <div className="stat-icon purple">↗</div>
                   <p>Conversion Rate</p>
                   <h2>{conversionRate}%</h2>
                   <span>Converted leads / all leads</span>
@@ -802,6 +961,235 @@ function App() {
                         </button>
                       </article>
                     ))}
+                  </div>
+                )}
+              </section>
+            </section>
+          )}
+
+          {/* PRODUCTS PAGE */}
+          {activeTab === "Products" && (
+            <section className="product-page">
+              <section className="panel form-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Add New Product</h2>
+                    <p>Register a product or service in your MongoDB Atlas database.</p>
+                  </div>
+                </div>
+
+                <form className="product-form" onSubmit={handleAddProduct}>
+                  <div className="form-field">
+                    <label htmlFor="product-name">Product Name *</label>
+                    <input
+                      id="product-name"
+                      value={productForm.name}
+                      onChange={(event) =>
+                        setProductForm({
+                          ...productForm,
+                          name: event.target.value,
+                        })
+                      }
+                      placeholder="e.g. AI CRM Enterprise"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="product-sku">SKU / Code</label>
+                    <input
+                      id="product-sku"
+                      value={productForm.sku}
+                      onChange={(event) =>
+                        setProductForm({
+                          ...productForm,
+                          sku: event.target.value,
+                        })
+                      }
+                      placeholder="e.g. PRD-AI-01"
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="product-category">Category *</label>
+                    <select
+                      id="product-category"
+                      value={productForm.category}
+                      onChange={(event) =>
+                        setProductForm({
+                          ...productForm,
+                          category: event.target.value,
+                        })
+                      }
+                    >
+                      <option value="Software">Software</option>
+                      <option value="AI Services">AI Services</option>
+                      <option value="Services">Services</option>
+                      <option value="Hardware">Hardware</option>
+                      <option value="Subscription">Subscription</option>
+                    </select>
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="product-price">Price (₹) *</label>
+                    <input
+                      id="product-price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={productForm.price}
+                      onChange={(event) =>
+                        setProductForm({
+                          ...productForm,
+                          price: event.target.value,
+                        })
+                      }
+                      placeholder="25000"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="product-stock">Stock / Units</label>
+                    <input
+                      id="product-stock"
+                      type="number"
+                      min="0"
+                      value={productForm.stock}
+                      onChange={(event) =>
+                        setProductForm({
+                          ...productForm,
+                          stock: event.target.value,
+                        })
+                      }
+                      placeholder="50"
+                    />
+                  </div>
+
+                  <div className="form-field form-field-full">
+                    <label htmlFor="product-desc">Description</label>
+                    <input
+                      id="product-desc"
+                      value={productForm.description}
+                      onChange={(event) =>
+                        setProductForm({
+                          ...productForm,
+                          description: event.target.value,
+                        })
+                      }
+                      placeholder="Product highlights, specifications, or licensing details"
+                    />
+                  </div>
+
+                  <button className="primary-button" type="submit">
+                    + Add Product to MongoDB
+                  </button>
+                </form>
+              </section>
+
+              <section className="panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Product Catalog</h2>
+                    <p>{products.length} products stored in MongoDB collection `products`</p>
+                  </div>
+                  <span className="count-badge">{filteredProducts.length} items</span>
+                </div>
+
+                <div className="product-filter-bar">
+                  <div className="search-box" style={{ marginBottom: 0 }}>
+                    <span>⌕</span>
+                    <input
+                      type="search"
+                      placeholder="Search name, SKU, or category..."
+                      value={productSearch}
+                      onChange={(event) => setProductSearch(event.target.value)}
+                    />
+                  </div>
+
+                  <div className="category-chips">
+                    {["All", "Software", "AI Services", "Services", "Subscription"].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        className={`category-chip ${productCategoryFilter === cat ? "active" : ""}`}
+                        onClick={() => setProductCategoryFilter(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {filteredProducts.length === 0 ? (
+                  <p className="empty-state">No matching products found. Try adding a new product.</p>
+                ) : (
+                  <div className="table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>SKU</th>
+                          <th>Product Name</th>
+                          <th>Category</th>
+                          <th>Price</th>
+                          <th>Stock</th>
+                          <th>Status</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProducts.map((product) => {
+                          const stockCount = Number(product.stock || 0);
+                          const isLow = stockCount > 0 && stockCount <= 10;
+                          const isOut = stockCount === 0;
+
+                          return (
+                            <tr key={product.id}>
+                              <td>
+                                <span className="product-sku-badge">{product.sku || "N/A"}</span>
+                              </td>
+                              <td>
+                                <strong>{product.name}</strong>
+                                {product.description && (
+                                  <span className="cell-subtitle">{product.description}</span>
+                                )}
+                              </td>
+                              <td>
+                                <span className="category-chip" style={{ padding: "3px 8px", fontSize: "10px" }}>
+                                  {product.category || "General"}
+                                </span>
+                              </td>
+                              <td>
+                                <strong>₹{Number(product.price || 0).toLocaleString("en-IN")}</strong>
+                              </td>
+                              <td>{stockCount} units</td>
+                              <td>
+                                <span
+                                  className={`product-badge ${
+                                    isOut
+                                      ? "product-badge-outofstock"
+                                      : isLow
+                                      ? "product-badge-lowstock"
+                                      : "product-badge-instock"
+                                  }`}
+                                >
+                                  {isOut ? "Out of Stock" : isLow ? "Low Stock" : "In Stock"}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  className="danger-button"
+                                  onClick={() => handleDeleteProduct(product.id)}
+                                  title="Delete product from MongoDB"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </section>

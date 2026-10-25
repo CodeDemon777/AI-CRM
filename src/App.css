@@ -910,3 +910,101 @@ td strong {
     display: none;
   }
 }
+
+/* ===================================================================
+   PRODUCT CATALOG STYLES
+   =================================================================== */
+.product-page {
+  display: grid;
+  gap: 22px;
+}
+
+.product-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.product-form .form-field-full {
+  grid-column: 1 / -1;
+}
+
+.product-form .primary-button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.product-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.category-chip {
+  padding: 6px 14px;
+  border: 1px solid #dfe2ee;
+  border-radius: 20px;
+  background: white;
+  color: #636b83;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.category-chip:hover {
+  background: #f4f5fb;
+}
+
+.category-chip.active {
+  border-color: #5749d1;
+  background: #5749d1;
+  color: white;
+}
+
+.product-sku-badge {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #edf0f8;
+  color: #555e77;
+  font-size: 10px;
+  font-family: monospace;
+}
+
+.product-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.product-badge-instock {
+  background: #e6f9ed;
+  color: #147a46;
+}
+
+.product-badge-lowstock {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+.product-badge-outofstock {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 820px) {
+  .product-form {
+    grid-template-columns: 1fr;
+  }
+}

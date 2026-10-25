@@ -9,19 +9,21 @@ public class DashboardStats {
 
     private long totalCustomers;
     private long totalLeads;
+    private long totalProducts;
     private long convertedLeads;
     private int conversionRate;
     private double totalPipelineValue;
-    private Map<String, Long> statusCounts;
+    Map<String, Long> statusCounts;
     private String databaseStatus;
 
     public DashboardStats() {}
 
-    public DashboardStats(long totalCustomers, long totalLeads, long convertedLeads,
+    public DashboardStats(long totalCustomers, long totalLeads, long totalProducts, long convertedLeads,
                           int conversionRate, double totalPipelineValue,
                           Map<String, Long> statusCounts, String databaseStatus) {
         this.totalCustomers = totalCustomers;
         this.totalLeads = totalLeads;
+        this.totalProducts = totalProducts;
         this.convertedLeads = convertedLeads;
         this.conversionRate = conversionRate;
         this.totalPipelineValue = totalPipelineValue;
@@ -43,6 +45,14 @@ public class DashboardStats {
 
     public void setTotalLeads(long totalLeads) {
         this.totalLeads = totalLeads;
+    }
+
+    public long getTotalProducts() {
+        return totalProducts;
+    }
+
+    public void setTotalProducts(long totalProducts) {
+        this.totalProducts = totalProducts;
     }
 
     public long getConvertedLeads() {
