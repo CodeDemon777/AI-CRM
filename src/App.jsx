@@ -312,7 +312,7 @@ function App() {
         ...productPayload,
       };
       setProducts((prev) => [...prev, newProduct]);
-      setMessage("Product added successfully (local mode).");
+      setMessage("⚠️ Saved locally (Frontend Demo Mode): Not connected to Render backend. In Vercel Settings -> Environment Variables, add VITE_API_URL pointing to your Render URL.");
     }
 
     setProductForm({
@@ -396,7 +396,7 @@ function App() {
         ...customerPayload,
       };
       setCustomers((previous) => [...previous, newCustomer]);
-      setMessage("Customer added successfully (local).");
+      setMessage("⚠️ Saved locally (Frontend Demo Mode): Not connected to Render backend. In Vercel Settings -> Environment Variables, add VITE_API_URL pointing to your Render URL.");
     }
 
     setCustomerForm({
@@ -484,7 +484,7 @@ function App() {
         ...leadPayload,
       };
       setLeads((previous) => [...previous, newLead]);
-      setMessage("Lead created successfully (local).");
+      setMessage("⚠️ Saved locally (Frontend Demo Mode): Not connected to Render backend. In Vercel Settings -> Environment Variables, add VITE_API_URL pointing to your Render URL.");
     }
 
     setLeadForm({

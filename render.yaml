@@ -10,4 +10,5 @@ services:
       - key: PORT
         value: 8080
       - key: MONGODB_URI
-        sync: false
+        value: mongodb+srv://crm_user:7rTHCSDbk8WiYsiU@cluster0.qempd67.mongodb.net/ai_crm?retryWrites=true&w=majority
+
